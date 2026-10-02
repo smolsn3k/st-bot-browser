@@ -1,0 +1,193 @@
+/* Bot Browser */
+#bb-list-btn { cursor: pointer; }
+body.bb-lock { overflow: hidden; }
+
+.bb-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background: rgba(0, 0, 0, .55);
+    display: flex;
+    justify-content: center;
+}
+.bb-overlay[hidden] { display: none; }
+
+.bb-shell {
+    width: min(1280px, 100%);
+    height: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--SmartThemeBlurTintColor, #1d1d24);
+    color: var(--SmartThemeBodyColor, #ddd);
+    border-inline: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .12));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bb-head {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px 10px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .12));
+}
+.bb-row { display: flex; align-items: center; gap: 8px; }
+.bb-row > .bb-title { flex: 1; }
+.bb-title { margin: 0; font-size: 1.25em; font-weight: 600; }
+.bb-muted { opacity: .6; font-weight: 400; font-size: .8em; }
+
+.bb-icon {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 0; border-radius: 10px;
+    background: transparent; color: inherit; cursor: pointer;
+}
+.bb-icon:hover { background: rgba(255, 255, 255, .08); }
+
+.bb-search {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; height: 42px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .15));
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .25);
+}
+.bb-search input {
+    flex: 1; min-width: 0; height: 100%;
+    border: 0; outline: 0; background: transparent; color: inherit;
+    font-size: 16px; /* prevents iOS zoom on focus */
+    margin: 0; box-shadow: none;
+}
+
+.bb-tools { flex-wrap: wrap; }
+.bb-tools select, .bb-tagpanel input {
+    height: 40px; min-width: 0;
+    border-radius: 10px;
+    font-size: 16px;
+    margin: 0;
+}
+.bb-tools select { flex: 1 1 150px; }
+.bb-tagpanel input { flex: 1; }
+
+.bb-btn {
+    height: 40px; padding: 0 14px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .15));
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .05);
+    color: inherit; font: inherit; cursor: pointer; white-space: nowrap;
+}
+.bb-btn:hover { background: rgba(255, 255, 255, .11); }
+.bb-btn.is-on { border-color: var(--SmartThemeQuoteColor, #7aa2ff); }
+.bb-btn b:empty { display: none; }
+.bb-btn b {
+    min-width: 20px; padding: 0 6px; border-radius: 10px; text-align: center;
+    background: var(--SmartThemeQuoteColor, #7aa2ff); color: #000; font-size: .85em;
+}
+
+.bb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bb-chips:empty { display: none; }
+.bb-chips-scroll { max-height: 28vh; overflow-y: auto; padding: 2px 0; }
+.bb-tagpanel { display: flex; flex-direction: column; gap: 8px; }
+.bb-tagpanel[hidden] { display: none; }
+
+.bb-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 32px; padding: 0 12px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .15));
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .05);
+    color: inherit; font: inherit; font-size: .9em; cursor: pointer;
+}
+.bb-chip span { opacity: .55; font-size: .85em; }
+.bb-chip.is-on {
+    border-color: var(--SmartThemeQuoteColor, #7aa2ff);
+    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #7aa2ff) 22%, transparent);
+}
+
+.bb-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px;
+}
+.bb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+
+.bb-card {
+    display: flex; gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .12));
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .22);
+    min-width: 0;
+}
+.bb-av {
+    flex: 0 0 72px; width: 72px; height: 96px;
+    padding: 0; border: 0; border-radius: 8px; overflow: hidden;
+    background: rgba(255, 255, 255, .06); cursor: pointer;
+}
+.bb-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.bb-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.bb-top { display: flex; align-items: center; gap: 8px; }
+.bb-name {
+    flex: 1; min-width: 0; margin: 0;
+    font-size: 1.05em; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bb-go { height: 32px; padding: 0 12px; font-size: .9em; }
+
+.bb-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.bb-tag {
+    padding: 2px 9px; border-radius: 10px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, .08);
+    color: inherit; font: inherit; font-size: .78em; cursor: pointer;
+}
+.bb-tag.is-on { border-color: var(--SmartThemeQuoteColor, #7aa2ff); }
+
+.bb-notes {
+    font-size: .92em; line-height: 1.45;
+    white-space: pre-line; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4;
+    overflow: hidden;
+}
+.bb-notes.bb-none { opacity: .5; font-style: italic; }
+.bb-card.is-open .bb-notes { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
+
+.bb-more {
+    align-self: flex-start;
+    padding: 4px 0; border: 0; background: none;
+    color: var(--SmartThemeQuoteColor, #7aa2ff);
+    font: inherit; font-size: .88em; cursor: pointer;
+}
+
+.bb-empty { padding: 48px 16px; text-align: center; opacity: .65; }
+#bb-sentinel { height: 1px; }
+
+/* Phones */
+@media (max-width: 640px) {
+    .bb-shell { border-inline: 0; }
+    .bb-head { padding: 8px 10px; gap: 6px; }
+    .bb-scroll { padding: 10px; }
+    .bb-grid { grid-template-columns: 1fr; gap: 10px; }
+    .bb-card { flex-wrap: wrap; padding: 10px; }
+    .bb-av { flex-basis: 56px; width: 56px; height: 76px; }
+    .bb-body { display: contents; }
+    .bb-top { flex: 1; min-width: 0; align-self: center; }
+    .bb-tags, .bb-notes, .bb-more { flex: 0 0 100%; }
+    .bb-tools select { flex-basis: 100%; }
+    .bb-tools .bb-btn { flex: 1; }
+    .bb-more { padding: 8px 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .bb-btn, .bb-chip, .bb-icon { transition: background-color .12s, border-color .12s; }
+}
