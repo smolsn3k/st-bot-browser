@@ -23,7 +23,9 @@ const I18N = {
         find_tag: 'Find a tag',
         clear_tags: 'Clear tags',
         no_tags: 'No tags found',
-        tag_hint: 'Tap a tag: include, then exclude, then off.',
+        tag_hint: 'Pick Include or Exclude, then tap tags. Tags on cards cycle: include, exclude, off.',
+        mode_include: 'Include',
+        mode_exclude: 'Exclude',
         empty: 'No bots match. Try fewer tags or a different search.',
         show_more: 'Show more',
         show_less: 'Show less',
@@ -55,7 +57,9 @@ const I18N = {
         find_tag: 'Найти тег',
         clear_tags: 'Сбросить теги',
         no_tags: 'Теги не найдены',
-        tag_hint: 'Нажмите на тег: включить, затем исключить, затем выкл.',
+        tag_hint: 'Выберите «Включить» или «Исключить» и нажимайте на теги. Теги на карточках переключаются: включить, исключить, выкл.',
+        mode_include: 'Включить',
+        mode_exclude: 'Исключить',
         empty: 'Ничего не найдено. Уберите часть тегов или измените запрос.',
         show_more: 'Развернуть',
         show_less: 'Свернуть',
@@ -82,6 +86,7 @@ const S = {
     tags: new Set(),     // must have
     exclude: new Set(),  // must not have
     tagQuery: '',
+    tagMode: 'include',
     allOpen: false,
     flip: new Set(),     // ids whose open state differs from the allOpen default
     rendered: 0,
@@ -198,19 +203,23 @@ function cardHtml(it) {
     const notes = it.notes
         ? `<div class="bb-notes">${esc(it.notes)}</div>`
         : `<div class="bb-notes bb-none">${esc(t('no_notes'))}</div>`;
-    const toggle = it.long
-        ? `<button type="button" class="bb-btn bb-toggle" aria-expanded="${open}"><i class="fa-solid fa-chevron-${open ? 'up' : 'down'}"></i><span>${esc(t(open ? 'show_less' : 'show_more'))}</span></button>`
+    const less = it.long
+        ? `<button type="button" class="bb-btn bb-less" aria-expanded="${open}"><i class="fa-solid fa-chevron-up"></i><span>${esc(t('show_less'))}</span></button>`
+        : '';
+    const more = it.long
+        ? `<button type="button" class="bb-more" aria-expanded="${open}"><i class="fa-solid fa-chevron-down"></i> <span>${esc(t('show_more'))}</span></button>`
         : '';
     return `<article class="bb-card${open ? ' is-open' : ''}" data-id="${it.id}">
         <button type="button" class="bb-av" data-act="open" aria-label="${esc(t('open_aria', { name: it.name }))}"><img loading="lazy" alt="" src="${avatarUrl(it.avatar)}"></button>
         <div class="bb-body">
             <div class="bb-top">
                 <h3 class="bb-name">${esc(it.name)}</h3>
-                ${toggle}
+                ${less}
                 <button type="button" class="bb-btn bb-go" data-act="open"><i class="fa-solid fa-comment"></i><span>${esc(t('open_chat'))}</span></button>
             </div>
             ${tags ? `<div class="bb-tags">${tags}</div>` : ''}
             ${notes}
+            ${more}
         </div>
     </article>`;
 }
@@ -218,12 +227,7 @@ function cardHtml(it) {
 function syncCard(card) {
     const open = isOpen(Number(card.dataset.id));
     card.classList.toggle('is-open', open);
-    const b = card.querySelector('.bb-toggle');
-    if (b) {
-        b.setAttribute('aria-expanded', String(open));
-        b.querySelector('i').className = `fa-solid fa-chevron-${open ? 'up' : 'down'}`;
-        b.querySelector('span').textContent = t(open ? 'show_less' : 'show_more');
-    }
+    card.querySelectorAll('.bb-more, .bb-less').forEach((b) => b.setAttribute('aria-expanded', String(open)));
 }
 
 function renderList(reset = true) {
@@ -278,6 +282,19 @@ function cycleTag(x) {
     else if (S.exclude.has(x)) { S.exclude.delete(x); }
     else { S.tags.add(x); }
     refresh();
+}
+
+function setTag(x, mode) {
+    const set = mode === 'exclude' ? S.exclude : S.tags;
+    const other = mode === 'exclude' ? S.tags : S.exclude;
+    if (set.has(x)) set.delete(x);
+    else { set.add(x); other.delete(x); }
+    refresh();
+}
+
+function syncMode() {
+    document.querySelectorAll('#bb-tagpanel .bb-segbtn').forEach((b) => b.classList.toggle('is-active', b.dataset.mode === S.tagMode));
+    $id('bb-tagpanel').classList.toggle('bb-mode-exclude', S.tagMode === 'exclude');
 }
 
 function removeTag(x) {
@@ -372,9 +389,13 @@ function build() {
             <div id="bb-active" class="bb-chips"></div>
             <div id="bb-tagpanel" class="bb-tagpanel" hidden>
                 <div class="bb-row">
-                    <input id="bb-tq" type="search" data-i18n-ph="find_tag" autocomplete="off">
+                    <div class="bb-seg" role="group">
+                        <button type="button" class="bb-segbtn is-active" data-mode="include"><i class="fa-solid fa-plus"></i> <span data-i18n="mode_include"></span></button>
+                        <button type="button" class="bb-segbtn" data-mode="exclude"><i class="fa-solid fa-minus"></i> <span data-i18n="mode_exclude"></span></button>
+                    </div>
                     <button type="button" id="bb-tclear" class="bb-btn" data-i18n="clear_tags"></button>
                 </div>
+                <input id="bb-tq" type="search" data-i18n-ph="find_tag" autocomplete="off">
                 <div class="bb-hint" data-i18n="tag_hint"></div>
                 <div id="bb-chips" class="bb-chips bb-chips-scroll"></div>
             </div>
@@ -424,9 +445,12 @@ function build() {
     el.addEventListener('click', (e) => {
         const pop = $id('bb-settings');
         if (!pop.hidden && !e.target.closest('#bb-settings') && !e.target.closest('#bb-gear')) pop.hidden = true;
+        const seg = e.target.closest('.bb-segbtn');
+        if (seg) { S.tagMode = seg.dataset.mode; syncMode(); return; }
         const chip = e.target.closest('.bb-chip');
         if (!chip) return;
-        chip.dataset.remove ? removeTag(chip.dataset.tag) : cycleTag(chip.dataset.tag);
+        if (chip.dataset.remove) removeTag(chip.dataset.tag);
+        else setTag(chip.dataset.tag, S.tagMode);
     });
 
     // cards
@@ -436,7 +460,7 @@ function build() {
         const id = Number(card.dataset.id);
         const tag = e.target.closest('.bb-tag');
         if (tag) return cycleTag(tag.dataset.tag);
-        if (e.target.closest('.bb-toggle')) {
+        if (e.target.closest('.bb-more, .bb-less')) {
             S.flip.has(id) ? S.flip.delete(id) : S.flip.add(id);
             syncCard(card);
             if (!isOpen(id)) card.scrollIntoView({ block: 'nearest' });
@@ -472,6 +496,7 @@ function openBrowser() {
     document.body.classList.add('bb-lock');
     applyOpacity();
     applyLang();
+    syncMode();
     refresh();
     if (window.matchMedia('(hover: hover)').matches) $id('bb-q').focus();
 }

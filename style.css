@@ -93,7 +93,7 @@ body.bb-lock { overflow: hidden; }
 .bb-tools { flex-wrap: wrap; }
 .bb-tools select, .bb-tagpanel input { height: 40px; min-width: 0; }
 .bb-tools select { flex: 1 1 150px; padding: 0 10px; }
-.bb-tagpanel input { flex: 1; }
+.bb-tagpanel input { flex: 1; width: 100%; box-sizing: border-box; }
 
 .bb-btn {
     height: 40px; padding: 0 14px;
@@ -225,6 +225,28 @@ body.bb-lock { overflow: hidden; }
 .bb-empty { padding: 48px 16px; text-align: center; opacity: .65; }
 #bb-sentinel { height: 1px; }
 
+/* include / exclude switch */
+.bb-seg { flex: 1; display: flex; border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .2)); border-radius: 10px; overflow: hidden; }
+.bb-segbtn {
+    flex: 1; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.bb-segbtn.is-active { background: color-mix(in srgb, var(--SmartThemeQuoteColor, #7aa2ff) 28%, transparent); font-weight: 600; }
+.bb-mode-exclude .bb-segbtn.is-active { background: rgba(229, 83, 75, .3); }
+.bb-mode-exclude .bb-chip:hover { border-color: #e5534b; }
+
+/* Show more (bottom of collapsed card) / Show less (top of expanded card) */
+.bb-more {
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 0; border: 0; background: none;
+    color: var(--SmartThemeQuoteColor, #7aa2ff);
+    font: inherit; font-size: .9em; cursor: pointer;
+}
+.bb-card:not(.is-open) .bb-less { display: none; }
+.bb-card.is-open .bb-more { display: none; }
+
 /* Phones */
 @media (max-width: 640px) {
     .bb-shell { border-inline: 0; }
@@ -235,9 +257,10 @@ body.bb-lock { overflow: hidden; }
     .bb-av { flex-basis: 56px; width: 56px; height: 76px; }
     .bb-body { display: contents; }
     .bb-top { flex: 1; min-width: 0; align-self: center; }
-    .bb-tags, .bb-notes { flex: 0 0 100%; }
+    .bb-tags, .bb-notes, .bb-more { flex: 0 0 100%; }
+    .bb-more { padding: 8px 0; }
     .bb-top .bb-btn { min-width: 40px; height: 36px; }
-    .bb-top .bb-btn span { display: none; } /* icon-only on phones */
+    .bb-top .bb-go span { display: none; } /* Open chat is icon-only on phones */
     .bb-tools select { flex-basis: 100%; }
     .bb-tools .bb-btn { flex: 1; }
     .bb-pop { top: 50px; }
