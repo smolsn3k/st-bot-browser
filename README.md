@@ -5,10 +5,15 @@ A SillyTavern extension for browsing your characters like a website (think Janit
 ## Features
 
 - **Creator's notes on every card**: the beginning is shown, with Show more / Show less per card, and Expand all / Collapse all for the whole list
+- **Show less stays on top**: the toggle sits in the card header, which sticks to the top while you scroll through a long expanded card, so you never have to scroll down to collapse it
 - **Search** across names, creator's notes and tags
-- **Tag filters**: pick one or several tags (a bot must have all selected tags). Tags are sorted by how many bots use them, with a "find a tag" box. You can also click a tag on any card to filter by it
-- **Sorting**: newest first, oldest first, A to Z, Z to A, recently chatted (your choice is remembered)
+- **Tag filters with exclude**: tap a tag to cycle include (+), exclude (−), off. Included tags must all be present, excluded tags must be absent. Tags are sorted by how many bots use them, with a "find a tag" box. You can also tap tags directly on cards
+- **Sorting**: newest first, oldest first, A to Z, Z to A, recently chatted
 - **Open chat** straight from a card (button or avatar)
+- **Settings (gear icon)**:
+  - **Language**: Auto, English or Русский
+  - **Opacity**: make the window see-through (20% to 100%)
+- **Follows your SillyTavern theme**: search bars, dropdowns and buttons use the theme colors
 - **Responsive**: multi-column grid on desktop, single-column full-screen layout on phones with large touch targets
 - **Fast with big libraries**: cards load in batches as you scroll
 
@@ -17,7 +22,7 @@ A SillyTavern extension for browsing your characters like a website (think Janit
 1. Create a folder named `bot-browser` in your SillyTavern extensions directory:
    - Per user: `SillyTavern/data/<your-user>/extensions/` (usually `default-user`)
    - Or for all users: `SillyTavern/public/scripts/extensions/third-party/`
-2. Put `manifest.json`, `index.js` and `style.css` inside it.
+2. Put `manifest.json`, `index.js`, `style.css` (and this README) inside it.
 3. Restart SillyTavern and refresh the page.
 
 ## Usage
@@ -33,7 +38,7 @@ Press **Esc**, tap the X, or click outside the window to close it.
 
 - Creator's notes are shown as plain text: HTML is stripped, and markdown is not rendered.
 - "Newest" and "Oldest" use the date SillyTavern stores for each character. Some imported bots may not have one, in which case they are ordered by their position in the list.
-- Preferences (the sort order) are stored in your browser's local storage.
+- Settings (sort order, language, opacity) are stored in your browser's local storage.
 - If the list icon doesn't appear on your SillyTavern version, use the wand menu entry instead.
 
 ## Files
@@ -41,5 +46,5 @@ Press **Esc**, tap the X, or click outside the window to close it.
 | File | Purpose |
 |------|---------|
 | `manifest.json` | Extension metadata |
-| `index.js` | Logic: data, filters, rendering, entry points |
+| `index.js` | Logic: data, filters, rendering, translations, entry points |
 | `style.css` | Styling (uses SillyTavern theme colors) |
