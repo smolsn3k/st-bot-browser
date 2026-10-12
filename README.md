@@ -9,6 +9,7 @@ A SillyTavern extension for browsing your characters like a website (think Janit
 - **Search** across names, creator's notes and tags
 - **Tag filters with exclude**: open **Tags**, choose **Include** or **Exclude** at the top of the panel, then tap tags. Included tags must all be present, excluded tags (red, −) must be absent. Tags are sorted by how many bots use them, with a "find a tag" box. Tapping a tag on a card cycles include, exclude, off
 - **Sorting**: newest first, oldest first, A to Z, Z to A, recently chatted
+- **Favorites**: tap the star on any card, then switch to the **Favorites** tab (with a count) to see only those bots. Search, tag filters and sorting work there too
 - **Open chat** straight from a card (button or avatar)
 - **Settings (gear icon)**:
   - **Language**: Auto, English or Русский
@@ -38,7 +39,7 @@ Press **Esc**, tap the X, or click outside the window to close it.
 
 - Creator's notes are shown as plain text: HTML is stripped, and markdown is not rendered.
 - "Newest" and "Oldest" use the date SillyTavern stores for each character. Some imported bots may not have one, in which case they are ordered by their position in the list.
-- Settings (sort order, language, opacity) are stored in your browser's local storage.
+- Settings (sort order, language, opacity, the sync switch) are stored in your browser's local storage. Synced favorites are stored under `bot_browser` in SillyTavern's extension settings and are keyed by the character's avatar filename.
 - If the list icon doesn't appear on your SillyTavern version, use the wand menu entry instead.
 
 ## Files
