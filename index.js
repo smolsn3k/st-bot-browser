@@ -1,6 +1,8 @@
-import { getContext } from '../../../extensions.js';
+import { getContext, extension_settings } from '../../../extensions.js';
 
 const PREF_KEY = 'bot_browser_prefs';
+const FAV_KEY = 'bot_browser_favs';     // local favorites (this browser only)
+const EXT_KEY = 'bot_browser';           // synced favorites live in extension_settings[EXT_KEY].favorites
 const BATCH = 40;
 const LONG_NOTES = 220;
 
@@ -39,6 +41,14 @@ const I18N = {
         opacity: 'Opacity',
         remove_tag: 'Remove tag',
         unnamed: 'Unnamed',
+        tab_all: 'All',
+        tab_fav: 'Favorites',
+        fav_add: 'Add to favorites',
+        fav_remove: 'Remove from favorites',
+        fav_empty: 'No favorites yet. Tap the star on any bot to add it.',
+        sync_favs: 'Sync favorites',
+        sync_hint: 'On: saved in your SillyTavern settings, shared across devices. Off: saved only in this browser. Switching merges or keeps a copy, nothing is lost.',
+        sync_na: 'Sync is not available in this SillyTavern version.',
     },
     ru: {
         wand: 'Браузер ботов',
@@ -73,6 +83,14 @@ const I18N = {
         opacity: 'Прозрачность окна',
         remove_tag: 'Убрать тег',
         unnamed: 'Без имени',
+        tab_all: 'Все',
+        tab_fav: 'Избранное',
+        fav_add: 'В избранное',
+        fav_remove: 'Убрать из избранного',
+        fav_empty: 'Избранного пока нет. Нажмите на звезду у любого бота.',
+        sync_favs: 'Синхронизировать избранное',
+        sync_hint: 'Вкл: хранится в настройках SillyTavern и доступно на всех устройствах. Выкл: только в этом браузере. При переключении списки объединяются или копируются, ничего не теряется.',
+        sync_na: 'Синхронизация недоступна в этой версии SillyTavern.',
     },
 };
 
@@ -83,6 +101,9 @@ const S = {
     sort: 'newest',
     lang: 'auto',
     opacity: 100,
+    sync: false,
+    tab: 'all',
+    favs: new Set(),     // avatar filenames
     tags: new Set(),     // must have
     exclude: new Set(),  // must not have
     tagQuery: '',
@@ -118,10 +139,63 @@ function loadPrefs() {
         if (['auto', 'en', 'ru'].includes(p.lang)) S.lang = p.lang;
         const o = Number(p.opacity);
         if (o >= 20 && o <= 100) S.opacity = o;
+        S.sync = p.sync === true;
     } catch { /* ignore */ }
 }
 function savePrefs() {
-    try { localStorage.setItem(PREF_KEY, JSON.stringify({ sort: S.sort, lang: S.lang, opacity: S.opacity })); } catch { /* ignore */ }
+    try { localStorage.setItem(PREF_KEY, JSON.stringify({ sort: S.sort, lang: S.lang, opacity: S.opacity, sync: S.sync })); } catch { /* ignore */ }
+}
+
+/* ---------- favorites ---------- */
+function syncStore() {
+    try {
+        if (!extension_settings) return null;
+        const st = (extension_settings[EXT_KEY] ??= {});
+        if (!Array.isArray(st.favorites)) st.favorites = [];
+        return st;
+    } catch { return null; }
+}
+const canSync = () => !!syncStore();
+const cleanList = (a) => (Array.isArray(a) ? a.filter((x) => typeof x === 'string' && x) : []);
+
+function readLocalFavs() {
+    try { return cleanList(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); } catch { return []; }
+}
+function writeLocalFavs(list) {
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+}
+function writeSyncedFavs(list) {
+    const st = syncStore();
+    if (!st) return false;
+    st.favorites = list;
+    try { (getContext().saveSettingsDebounced || (() => {}))(); } catch { /* ignore */ }
+    return true;
+}
+
+function loadFavs() {
+    const st = S.sync ? syncStore() : null;
+    if (S.sync && !st) S.sync = false; // sync unavailable here, fall back to local
+    S.favs = new Set(S.sync ? cleanList(st.favorites) : readLocalFavs());
+}
+function persistFavs() {
+    const list = [...S.favs];
+    if (S.sync) writeSyncedFavs(list); else writeLocalFavs(list);
+}
+
+// Turning sync on merges this browser's list into the account list.
+// Turning it off keeps a copy of the account list in this browser.
+function setSync(on) {
+    if (on && !canSync()) return false;
+    const synced = canSync() ? cleanList(syncStore().favorites) : [];
+    if (on) {
+        S.favs = new Set([...synced, ...readLocalFavs(), ...S.favs]);
+        S.sync = true;
+    } else {
+        S.sync = false; // current list is kept as-is and written to this browser
+    }
+    persistFavs();
+    savePrefs();
+    return true;
 }
 
 /* ---------- theme / opacity ---------- */
@@ -186,6 +260,7 @@ function applyFilters() {
     const q = S.query.trim().toLowerCase();
     const words = q ? q.split(/\s+/) : [];
     S.view = S.items
+        .filter((it) => S.tab !== 'fav' || S.favs.has(it.avatar))
         .filter((it) => [...S.tags].every((x) => it.tags.includes(x)))
         .filter((it) => ![...S.exclude].some((x) => it.tags.includes(x)))
         .filter((it) => words.every((w) => it.hay.includes(w)))
@@ -196,6 +271,10 @@ function applyFilters() {
 const isOpen = (id) => S.allOpen !== S.flip.has(id);
 const avatarUrl = (a) => `/thumbnail?type=avatar&file=${encodeURIComponent(a)}`;
 const tagState = (x) => (S.tags.has(x) ? ' is-on' : S.exclude.has(x) ? ' is-off' : '');
+
+function favBtnHtml(on) {
+    return `<button type="button" class="bb-btn bb-fav${on ? ' is-fav' : ''}" data-act="fav" aria-pressed="${on}" aria-label="${esc(t(on ? 'fav_remove' : 'fav_add'))}" title="${esc(t(on ? 'fav_remove' : 'fav_add'))}"><i class="${on ? 'fa-solid' : 'fa-regular'} fa-star"></i></button>`;
+}
 
 function cardHtml(it) {
     const open = isOpen(it.id);
@@ -209,11 +288,13 @@ function cardHtml(it) {
     const more = it.long
         ? `<button type="button" class="bb-more" aria-expanded="${open}"><i class="fa-solid fa-chevron-down"></i> <span>${esc(t('show_more'))}</span></button>`
         : '';
+    const fav = S.favs.has(it.avatar);
     return `<article class="bb-card${open ? ' is-open' : ''}" data-id="${it.id}">
         <button type="button" class="bb-av" data-act="open" aria-label="${esc(t('open_aria', { name: it.name }))}"><img loading="lazy" alt="" src="${avatarUrl(it.avatar)}"></button>
         <div class="bb-body">
             <div class="bb-top">
                 <h3 class="bb-name">${esc(it.name)}</h3>
+                ${favBtnHtml(fav)}
                 ${less}
                 <button type="button" class="bb-btn bb-go" data-act="open"><i class="fa-solid fa-comment"></i><span>${esc(t('open_chat'))}</span></button>
             </div>
@@ -240,10 +321,52 @@ function renderList(reset = true) {
     const next = S.view.slice(S.rendered, S.rendered + BATCH);
     grid.insertAdjacentHTML('beforeend', next.map(cardHtml).join(''));
     S.rendered += next.length;
-    $id('bb-empty').hidden = S.view.length > 0;
+    updateCount();
+}
+
+function favTotal() {
+    return S.items.reduce((n, it) => n + (S.favs.has(it.avatar) ? 1 : 0), 0);
+}
+
+function updateCount() {
+    const empty = $id('bb-empty');
+    empty.hidden = S.view.length > 0;
+    empty.textContent = t(S.tab === 'fav' && !favTotal() ? 'fav_empty' : 'empty');
     $id('bb-count').textContent = S.view.length === S.items.length
         ? `${S.items.length}`
         : t('count_of', { a: S.view.length, b: S.items.length });
+    const n = favTotal();
+    $id('bb-fav-n').textContent = n ? String(n) : '';
+}
+
+function syncTabs() {
+    document.querySelectorAll('#bb-overlay .bb-tabbtn').forEach((b) => {
+        const on = b.dataset.tab === S.tab;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-selected', String(on));
+    });
+}
+
+function toggleFav(id, card) {
+    const it = S.items[id];
+    if (!it) return;
+    const on = !S.favs.has(it.avatar);
+    if (on) S.favs.add(it.avatar); else S.favs.delete(it.avatar);
+    persistFavs();
+    if (S.tab === 'fav' && !on) {
+        // leaves the Favorites tab right away
+        card.remove();
+        S.view = S.view.filter((v) => v.id !== id);
+        S.rendered = Math.max(0, S.rendered - 1);
+    } else {
+        const btn = card.querySelector('.bb-fav');
+        btn.classList.toggle('is-fav', on);
+        btn.setAttribute('aria-pressed', String(on));
+        btn.setAttribute('aria-label', t(on ? 'fav_remove' : 'fav_add'));
+        btn.title = t(on ? 'fav_remove' : 'fav_add');
+        btn.firstElementChild.className = `${on ? 'fa-solid' : 'fa-regular'} fa-star`;
+    }
+    updateCount();
 }
 
 function renderTagPanel() {
@@ -311,6 +434,15 @@ function applyLang() {
         el.querySelectorAll('[data-i18n-aria]').forEach((n) => n.setAttribute('aria-label', t(n.dataset.i18nAria)));
         $id('bb-expand').textContent = t(S.allOpen ? 'collapse_all' : 'expand_all');
         el.setAttribute('aria-label', t('wand'));
+        const sw = $id('bb-sync');
+        const na = !canSync();
+        sw.disabled = na;
+        $id('bb-sync-hint').textContent = t(na ? 'sync_na' : 'sync_hint');
+        document.querySelectorAll('#bb-grid .bb-fav').forEach((b) => {
+            const on = b.classList.contains('is-fav');
+            b.setAttribute('aria-label', t(on ? 'fav_remove' : 'fav_add'));
+            b.title = t(on ? 'fav_remove' : 'fav_add');
+        });
     }
     const w = $id('bb-wand-label');
     if (w) w.textContent = t('wand');
@@ -370,11 +502,19 @@ function build() {
                 <label class="bb-field"><span data-i18n="opacity"></span>
                     <span class="bb-range"><input id="bb-op" type="range" min="20" max="100" step="5"><output id="bb-op-val"></output></span>
                 </label>
+                <label class="bb-field"><span data-i18n="sync_favs"></span>
+                    <input id="bb-sync" type="checkbox" class="bb-sw">
+                </label>
+                <div id="bb-sync-hint" class="bb-hint" data-i18n="sync_hint"></div>
             </div>
             <label class="bb-search">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input id="bb-q" type="search" data-i18n-ph="search_ph" autocomplete="off" enterkeyhint="search">
             </label>
+            <div class="bb-seg bb-tabs" role="tablist">
+                <button type="button" class="bb-tabbtn is-active" role="tab" data-tab="all"><i class="fa-solid fa-table-cells-large"></i> <span data-i18n="tab_all"></span></button>
+                <button type="button" class="bb-tabbtn" role="tab" data-tab="fav"><i class="fa-solid fa-star"></i> <span data-i18n="tab_fav"></span> <b id="bb-fav-n" class="bb-badge"></b></button>
+            </div>
             <div class="bb-row bb-tools">
                 <select id="bb-sort" data-i18n-aria="sort_aria">
                     <option value="newest" data-i18n="sort_newest"></option>
@@ -403,7 +543,7 @@ function build() {
         <main id="bb-scroll" class="bb-scroll">
             <div class="bb-inner">
                 <div id="bb-grid" class="bb-grid"></div>
-                <div id="bb-empty" class="bb-empty" data-i18n="empty" hidden></div>
+                <div id="bb-empty" class="bb-empty" hidden></div>
                 <div id="bb-sentinel" aria-hidden="true"></div>
             </div>
         </main>
@@ -413,6 +553,7 @@ function build() {
     $id('bb-sort').value = S.sort;
     $id('bb-lang').value = S.lang;
     $id('bb-op').value = String(S.opacity);
+    $id('bb-sync').checked = S.sync;
 
     $id('bb-close').addEventListener('click', closeBrowser);
     $id('bb-gear').addEventListener('click', () => { $id('bb-settings').hidden = !$id('bb-settings').hidden; });
@@ -431,6 +572,17 @@ function build() {
         applyOpacity();
         savePrefs();
     });
+
+    $id('bb-sync').addEventListener('change', (e) => {
+        if (!setSync(e.target.checked)) e.target.checked = false;
+        refresh();
+    });
+    el.querySelectorAll('.bb-tabbtn').forEach((b) => b.addEventListener('click', () => {
+        if (S.tab === b.dataset.tab) return;
+        S.tab = b.dataset.tab;
+        syncTabs();
+        refresh();
+    }));
 
     $id('bb-tags-btn').addEventListener('click', () => {
         const p = $id('bb-tagpanel');
@@ -466,6 +618,7 @@ function build() {
             if (!isOpen(id)) card.scrollIntoView({ block: 'nearest' });
             return;
         }
+        if (e.target.closest('[data-act="fav"]')) return toggleFav(id, card);
         if (e.target.closest('[data-act="open"]')) openCharacter(id);
     });
     $id('bb-grid').addEventListener('error', (e) => {
@@ -491,12 +644,15 @@ function build() {
 
 function openBrowser() {
     build();
+    loadFavs();
+    $id('bb-sync').checked = S.sync;
     buildItems();
     $id('bb-overlay').hidden = false;
     document.body.classList.add('bb-lock');
     applyOpacity();
     applyLang();
     syncMode();
+    syncTabs();
     refresh();
     if (window.matchMedia('(hover: hover)').matches) $id('bb-q').focus();
 }
