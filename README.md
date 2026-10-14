@@ -14,17 +14,26 @@ A SillyTavern extension for browsing your characters like a website (think Janit
 - **Settings (gear icon)**:
   - **Language**: Auto, English or Русский
   - **Opacity**: make the window see-through (20% to 100%)
+  - **Sync favorites**: off = favorites are saved only in this browser; on = saved in your SillyTavern settings and shared across devices. Turning it on merges this browser's favorites into the synced list; turning it off keeps a copy in this browser
 - **Follows your SillyTavern theme**: search bars, dropdowns and buttons use the theme colors
 - **Responsive**: multi-column grid on desktop, single-column full-screen layout on phones with large touch targets
 - **Fast with big libraries**: cards load in batches as you scroll
 
 ## Installation
 
-1. Create a folder named `bot-browser` in your SillyTavern extensions directory:
-   - Per user: `SillyTavern/data/<your-user>/extensions/` (usually `default-user`)
-   - Or for all users: `SillyTavern/public/scripts/extensions/third-party/`
-2. Put `manifest.json`, `index.js`, `style.css` (and this README) inside it.
-3. Restart SillyTavern and refresh the page.
+Install it with SillyTavern's built-in extension installer:
+
+1. In SillyTavern, open the **Extensions** panel (the stacked-blocks icon in the top bar).
+2. Click **Install extension**.
+3. Paste this URL and confirm:
+
+   ```
+   https://github.com/smolsn3k/st-bot-browser
+   ```
+
+4. Reload the page if SillyTavern doesn't do it for you.
+
+To update later, open **Extensions → Manage extensions** and click the update button next to Bot Browser, or use **Update all**.
 
 ## Usage
 
