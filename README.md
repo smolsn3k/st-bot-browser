@@ -10,6 +10,7 @@ A SillyTavern extension for browsing your characters like a website (think Janit
 - **Tag filters with exclude**: open **Tags**, choose **Include** or **Exclude** at the top of the panel, then tap tags. Included tags must all be present, excluded tags (red, −) must be absent. Tags are sorted by how many bots use them, with a "find a tag" box. Tapping a tag on a card cycles include, exclude, off
 - **Sorting**: newest first, oldest first, A to Z, Z to A, recently chatted
 - **Favorites**: tap the star on any card, then switch to the **Favorites** tab (with a count) to see only those bots. Search, tag filters and sorting work there too
+- **Surprise me**: type how many bots you want (the number is required) and tap **Surprise me** to get that many random bots. It picks from the bots that match your selected tags (included and excluded), or from all bots if no tags are selected. Search text and the Favorites tab still apply, so on the Favorites tab you get random favorites. If fewer bots match than you asked for, you get all of them. **Shuffle again** rerolls, **Show all** returns to the normal list, and changing any filter also does
 - **Open chat** straight from a card (button or avatar)
 - **Settings (gear icon)**:
   - **Language**: Auto, English or Русский

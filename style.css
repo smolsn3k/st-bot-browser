@@ -244,6 +244,20 @@ body.bb-lock { overflow: hidden; }
 .bb-tabbtn.is-active { background: color-mix(in srgb, var(--SmartThemeQuoteColor, #7aa2ff) 28%, transparent); font-weight: 600; }
 .bb-tabbtn[data-tab="fav"].is-active .fa-star { color: #f5c542; }
 
+/* Surprise */
+.bb-surprise-row input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; }
+#bb-overlay input.is-bad { border-color: #e5534b !important; }
+.bb-err { color: #ff7b72; opacity: 1; }
+.bb-err[hidden], .bb-banner[hidden] { display: none; }
+.bb-banner {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    padding: 6px 8px 6px 12px; border-radius: 10px;
+    border: 1px solid var(--SmartThemeQuoteColor, #7aa2ff);
+    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #7aa2ff) 14%, transparent);
+}
+.bb-banner-text { flex: 1 1 140px; font-weight: 600; }
+.bb-banner .bb-btn { height: 34px; padding: 0 10px; }
+
 /* Sync switch */
 #bb-overlay input.bb-sw {
     -webkit-appearance: none; appearance: none;

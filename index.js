@@ -49,6 +49,12 @@ const I18N = {
         sync_favs: 'Sync favorites',
         sync_hint: 'On: saved in your SillyTavern settings, shared across devices. Off: saved only in this browser. Switching merges or keeps a copy, nothing is lost.',
         sync_na: 'Sync is not available in this SillyTavern version.',
+        surprise: 'Surprise me',
+        surprise_n_ph: 'How many bots?',
+        surprise_need_n: 'Enter a number first (1 or more).',
+        surprise_banner: 'Random picks: {a} of {b} matching',
+        surprise_again: 'Shuffle again',
+        surprise_exit: 'Show all',
     },
     ru: {
         wand: 'Браузер ботов',
@@ -91,6 +97,12 @@ const I18N = {
         sync_favs: 'Синхронизировать избранное',
         sync_hint: 'Вкл: хранится в настройках SillyTavern и доступно на всех устройствах. Выкл: только в этом браузере. При переключении списки объединяются или копируются, ничего не теряется.',
         sync_na: 'Синхронизация недоступна в этой версии SillyTavern.',
+        surprise: 'Удиви меня',
+        surprise_n_ph: 'Сколько ботов?',
+        surprise_need_n: 'Сначала введите число (1 или больше).',
+        surprise_banner: 'Случайные: {a} из {b} подходящих',
+        surprise_again: 'Ещё раз',
+        surprise_exit: 'Показать все',
     },
 };
 
@@ -103,6 +115,7 @@ const S = {
     opacity: 100,
     sync: false,
     tab: 'all',
+    surprise: null,      // { shown, total } while random picks are displayed
     favs: new Set(),     // avatar filenames
     tags: new Set(),     // must have
     exclude: new Set(),  // must not have
@@ -393,10 +406,44 @@ function renderActive() {
 }
 
 function refresh() {
+    S.surprise = null; // any filter, search, sort or tab change leaves surprise mode
     applyFilters();
     renderActive();
     renderList(true);
+    renderSurprise();
     if (!$id('bb-tagpanel').hidden) renderTagPanel();
+}
+
+/* ---------- surprise ---------- */
+function renderSurprise() {
+    const bar = $id('bb-surprise');
+    bar.hidden = !S.surprise;
+    if (S.surprise) $id('bb-sur-text').textContent = t('surprise_banner', { a: S.surprise.shown, b: S.surprise.total });
+}
+
+function setNeedN(on) {
+    $id('bb-n').classList.toggle('is-bad', on);
+    $id('bb-n-err').hidden = !on;
+}
+
+// Random bots from whatever the current tag filters allow (all bots when no tags are picked).
+// Search text and the Favorites tab still apply, so the pool is exactly what the list would show.
+function runSurprise() {
+    const inp = $id('bb-n');
+    const n = Math.floor(Number(inp.value));
+    if (!inp.value.trim() || !(n >= 1)) { setNeedN(true); inp.focus(); return; }
+    setNeedN(false);
+    applyFilters();
+    const pool = S.view.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    S.view = pool.slice(0, n);
+    S.surprise = { shown: S.view.length, total: pool.length };
+    renderActive();
+    renderList(true);
+    renderSurprise();
 }
 
 // neutral -> include -> exclude -> neutral
@@ -526,7 +573,17 @@ function build() {
                 <button type="button" id="bb-tags-btn" class="bb-btn"><i class="fa-solid fa-tags"></i> <span data-i18n="tags"></span> <b id="bb-tags-n"></b></button>
                 <button type="button" id="bb-expand" class="bb-btn"></button>
             </div>
+            <div class="bb-row bb-surprise-row">
+                <input id="bb-n" type="number" inputmode="numeric" min="1" step="1" data-i18n-ph="surprise_n_ph" autocomplete="off" enterkeyhint="go">
+                <button type="button" id="bb-surprise-btn" class="bb-btn"><i class="fa-solid fa-dice"></i> <span data-i18n="surprise"></span></button>
+            </div>
+            <div id="bb-n-err" class="bb-hint bb-err" data-i18n="surprise_need_n" hidden></div>
             <div id="bb-active" class="bb-chips"></div>
+            <div id="bb-surprise" class="bb-banner" hidden>
+                <span id="bb-sur-text" class="bb-banner-text"></span>
+                <button type="button" id="bb-sur-again" class="bb-btn"><i class="fa-solid fa-shuffle"></i> <span data-i18n="surprise_again"></span></button>
+                <button type="button" id="bb-sur-exit" class="bb-btn"><i class="fa-solid fa-xmark"></i> <span data-i18n="surprise_exit"></span></button>
+            </div>
             <div id="bb-tagpanel" class="bb-tagpanel" hidden>
                 <div class="bb-row">
                     <div class="bb-seg" role="group">
@@ -583,6 +640,12 @@ function build() {
         syncTabs();
         refresh();
     }));
+
+    $id('bb-surprise-btn').addEventListener('click', runSurprise);
+    $id('bb-sur-again').addEventListener('click', runSurprise);
+    $id('bb-sur-exit').addEventListener('click', refresh);
+    $id('bb-n').addEventListener('input', () => setNeedN(false));
+    $id('bb-n').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSurprise(); } });
 
     $id('bb-tags-btn').addEventListener('click', () => {
         const p = $id('bb-tagpanel');
