@@ -4,7 +4,7 @@ const PREF_KEY = 'bot_browser_prefs';
 const FAV_KEY = 'bot_browser_favs';     // local favorites (this browser only)
 const EXT_KEY = 'bot_browser';           // synced favorites live in extension_settings[EXT_KEY].favorites
 const BATCH = 40;
-const VERSION = '1.4.2';
+const VERSION = '1.5.0';
 const LONG_NOTES = 220;
 
 /* ---------- i18n ---------- */
@@ -153,28 +153,6 @@ const S = {
 };
 
 const GR_CSS = `
-.bb-gr {
-    position: fixed !important; inset: 0 !important; z-index: 5100 !important;
-    display: flex; align-items: center; justify-content: center;
-    width: auto; height: auto; margin: 0;
-    box-sizing: border-box;
-    padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
-    background: rgba(0, 0, 0, .6) !important;
-    color: var(--SmartThemeBodyColor, #ddd);
-    font-family: inherit;
-}
-.bb-gr[hidden] { display: none !important; }
-.bb-gr-box {
-    width: min(820px, 100%); max-height: 100%;
-    display: flex; flex-direction: column; gap: 10px;
-    padding: 12px; box-sizing: border-box;
-    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .2));
-    border-radius: 14px;
-    background-color: var(--bb-gr-bg, #1d1d24) !important;
-    color: var(--SmartThemeBodyColor, #ddd);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
-    outline: 0;
-}
 .bb-gr-title {
     flex: 1; min-width: 0; margin: 0; font-size: 1.1em; font-weight: 600;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -193,22 +171,14 @@ const GR_CSS = `
     font-weight: 600;
 }
 .bb-gr-text {
-    flex: 1 1 auto; min-height: 80px; overflow-y: auto; overscroll-behavior: contain;
     padding: 10px 12px; border-radius: 10px;
     border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .12));
     background: rgba(255, 255, 255, .05);
     white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
 }
 .bb-gr-text.bb-none { opacity: .6; font-style: italic; }
-.bb-gr-foot { flex: none; }
-.bb-gr-foot[hidden] { display: none; }
 .bb-gr-pos { flex: 1; text-align: center; opacity: .7; font-size: .9em; }
 .bb-btn:disabled { opacity: .4; cursor: not-allowed; }
-
-@media (max-width: 640px) {
-    .bb-gr { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) !important; }
-    .bb-gr-box { width: 100% !important; height: 100% !important; max-height: none !important; border: 0 !important; border-radius: 0 !important; padding: 10px !important; }
-}
 `;
 
 const G = { id: null, list: [], idx: 0, req: 0 };   // greetings viewer
@@ -634,13 +604,13 @@ function renderGreetings(state) {
     $id('bb-gr-title').textContent = t('gr_title', { name: S.items[G.id]?.name || '' });
     if (msg) {
         tabs.innerHTML = '';
-        foot.hidden = true;
+        foot.style.display = 'none';
         body.textContent = t(msg);
         body.classList.add('bb-none');
         return;
     }
     body.classList.remove('bb-none');
-    foot.hidden = false;
+    foot.style.display = 'flex';
     const cur = G.list[G.idx];
     tabs.innerHTML = G.list.map((g, i) => {
         const label = g.alt ? t('gr_alt', { n: g.alt }) : t('gr_first');
@@ -660,29 +630,42 @@ async function showGreetings(id) {
     if (!it) return;
     const req = ++G.req;
     G.id = id; G.list = []; G.idx = 0;
-    setGreetingsBg();
-    $id('bb-gr').hidden = false;
+    openGreetingsView();
     renderGreetings('loading');
     let list;
     try { list = await loadGreetings(it); }
-    catch { if (req === G.req && !$id('bb-gr').hidden) renderGreetings('error'); return; }
-    if (req !== G.req || $id('bb-gr').hidden) return;
+    catch { if (req === G.req && grIsOpen()) renderGreetings('error'); return; }
+    if (req !== G.req || !grIsOpen()) return;
     G.list = list;
     renderGreetings();
     $id('bb-gr-box').focus({ preventScroll: true });
 }
 
-function setGreetingsBg() {
-    const [r, g, b] = themeRgb();
-    $id('bb-gr').style.setProperty('--bb-gr-bg', `rgb(${r}, ${g}, ${b})`);
+const grIsOpen = () => $id('bb-gr')?.style.display === 'flex';
+
+// The viewer is a view inside the shell: the list header and the list are hidden
+// while it is open, so nothing can overlap it.
+function openGreetingsView() {
+    const gr = $id('bb-gr');
+    const sc = $id('bb-scroll');
+    const head = document.querySelector('#bb-overlay .bb-head');
+    G.scroll = sc.scrollTop;
+    head.style.display = 'none';
+    sc.style.display = 'none';
+    gr.style.display = 'flex';
     [['bb-gr-close', 'close'], ['bb-gr-prev', 'gr_prev'], ['bb-gr-next', 'gr_next']]
         .forEach(([i, k]) => $id(i).setAttribute('aria-label', t(k)));
 }
 
 function closeGreetings() {
     G.req++;
-    const el = $id('bb-gr');
-    if (el) el.hidden = true;
+    if (!grIsOpen()) return;
+    $id('bb-gr').style.display = 'none';
+    const head = document.querySelector('#bb-overlay .bb-head');
+    const sc = $id('bb-scroll');
+    head.style.display = '';
+    sc.style.display = '';
+    sc.scrollTop = G.scroll || 0;
 }
 
 function stepGreeting(d) {
@@ -833,25 +816,23 @@ function build() {
     }
     const gr = document.createElement('div');
     gr.id = 'bb-gr';
-    gr.className = 'bb-gr';
-    gr.hidden = true;
+    gr.style.cssText = 'display:none;flex-direction:column;flex:1 1 auto;min-height:0;box-sizing:border-box;';
     gr.innerHTML = `
-        <div id="bb-gr-box" class="bb-gr-box" role="dialog" aria-modal="true" tabindex="-1">
+        <div id="bb-gr-box" role="region" tabindex="-1" style="display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;padding:12px 14px;box-sizing:border-box;outline:0;">
             <div class="bb-row">
                 <h3 id="bb-gr-title" class="bb-gr-title"></h3>
-                <button type="button" id="bb-gr-close" class="bb-icon" data-i18n-aria="close"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" id="bb-gr-close" class="bb-icon"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="bb-gr-tabs" class="bb-gr-tabs"></div>
-            <div id="bb-gr-text" class="bb-gr-text"></div>
-            <div id="bb-gr-foot" class="bb-row bb-gr-foot" hidden>
-                <button type="button" id="bb-gr-prev" class="bb-btn" data-i18n-aria="gr_prev"><i class="fa-solid fa-chevron-left"></i></button>
+            <div id="bb-gr-text" class="bb-gr-text" style="flex:1 1 auto;min-height:0;overflow-y:auto;"></div>
+            <div id="bb-gr-foot" class="bb-row bb-gr-foot" style="flex:none;display:none;">
+                <button type="button" id="bb-gr-prev" class="bb-btn"><i class="fa-solid fa-chevron-left"></i></button>
                 <span id="bb-gr-pos" class="bb-gr-pos"></span>
-                <button type="button" id="bb-gr-next" class="bb-btn" data-i18n-aria="gr_next"><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" id="bb-gr-next" class="bb-btn"><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" id="bb-gr-copy" class="bb-btn"><i class="fa-solid fa-copy"></i> <span></span></button>
             </div>
-        </div>
-    `;
-    document.body.appendChild(gr);
+        </div>`;
+    el.querySelector('.bb-shell').appendChild(gr);
 
     $id('bb-sort').value = S.sort;
     $id('bb-lang').value = S.lang;
@@ -916,7 +897,6 @@ function build() {
 
     // greetings viewer
     $id('bb-gr-close').addEventListener('click', closeGreetings);
-    $id('bb-gr').addEventListener('mousedown', (e) => { if (e.target === $id('bb-gr')) closeGreetings(); });
     $id('bb-gr-prev').addEventListener('click', () => stepGreeting(-1));
     $id('bb-gr-next').addEventListener('click', () => stepGreeting(1));
     $id('bb-gr-copy').addEventListener('click', copyGreeting);
@@ -958,7 +938,7 @@ function build() {
 
     document.addEventListener('keydown', (e) => {
         if (el.hidden) return;
-        const grOpen = !$id('bb-gr').hidden;
+        const grOpen = grIsOpen();
         if (grOpen && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.target.closest?.('input, select, textarea')) {
             e.preventDefault();
             stepGreeting(e.key === 'ArrowLeft' ? -1 : 1);
