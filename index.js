@@ -55,6 +55,18 @@ const I18N = {
         surprise_banner: 'Random picks: {a} of {b} matching',
         surprise_again: 'Shuffle again',
         surprise_exit: 'Show all',
+        greetings: 'Initial and alternate messages',
+        gr_title: '{name}: greetings',
+        gr_first: 'Initial message',
+        gr_alt: 'Alt {n}',
+        gr_of: '{a} of {b}',
+        gr_none: 'This bot has no greeting messages.',
+        gr_loading: 'Loading...',
+        gr_err: "Couldn't load the greetings. Try again.",
+        gr_prev: 'Previous',
+        gr_next: 'Next',
+        gr_copy: 'Copy',
+        gr_copied: 'Copied',
     },
     ru: {
         wand: 'Браузер ботов',
@@ -103,6 +115,18 @@ const I18N = {
         surprise_banner: 'Случайные: {a} из {b} подходящих',
         surprise_again: 'Ещё раз',
         surprise_exit: 'Показать все',
+        greetings: 'Первое и альтернативные сообщения',
+        gr_title: '{name}: приветствия',
+        gr_first: 'Первое сообщение',
+        gr_alt: 'Альт {n}',
+        gr_of: '{a} из {b}',
+        gr_none: 'У этого бота нет приветственных сообщений.',
+        gr_loading: 'Загрузка...',
+        gr_err: 'Не удалось загрузить приветствия. Попробуйте ещё раз.',
+        gr_prev: 'Назад',
+        gr_next: 'Вперёд',
+        gr_copy: 'Копировать',
+        gr_copied: 'Скопировано',
     },
 };
 
@@ -126,6 +150,9 @@ const S = {
     rendered: 0,
     built: false,
 };
+
+const G = { id: null, list: [], idx: 0, req: 0 };   // greetings viewer
+const grCache = new Map();                           // avatar -> [{ text, alt }]
 
 const effLang = () => (S.lang === 'auto'
     ? ((navigator.language || 'en').toLowerCase().startsWith('ru') ? 'ru' : 'en')
@@ -308,6 +335,7 @@ function cardHtml(it) {
             <div class="bb-top">
                 <h3 class="bb-name">${esc(it.name)}</h3>
                 ${favBtnHtml(fav)}
+                <button type="button" class="bb-btn bb-gr-btn" data-act="greetings" aria-label="${esc(t('greetings'))}" title="${esc(t('greetings'))}"><i class="fa-solid fa-comments"></i></button>
                 ${less}
                 <button type="button" class="bb-btn bb-go" data-act="open"><i class="fa-solid fa-comment"></i><span>${esc(t('open_chat'))}</span></button>
             </div>
@@ -497,6 +525,126 @@ function applyLang() {
     if (b) b.title = t('wand');
 }
 
+/* ---------- greetings viewer ---------- */
+// Initial message + alternate greetings. Entries with no text are skipped,
+// but alt numbers keep the card's own numbering.
+function extractGreetings(c) {
+    const first = c?.first_mes ?? c?.data?.first_mes;
+    const alts = c?.data?.alternate_greetings;
+    if (first === undefined && alts === undefined) return null; // not loaded (shallow card)
+    const out = [];
+    if (typeof first === 'string' && first.trim()) out.push({ text: first, alt: 0 });
+    (Array.isArray(alts) ? alts : []).forEach((x, i) => {
+        if (typeof x === 'string' && x.trim()) out.push({ text: x, alt: i + 1 });
+    });
+    return out;
+}
+
+async function loadGreetings(it) {
+    if (grCache.has(it.avatar)) return grCache.get(it.avatar);
+    const ctx = getContext();
+    const local = ctx.characters?.[it.id];
+    let list = local && local.avatar === it.avatar ? extractGreetings(local) : null;
+    if (!list) {
+        const r = await fetch('/api/characters/get', {
+            method: 'POST',
+            headers: ctx.getRequestHeaders(),
+            body: JSON.stringify({ avatar_url: it.avatar }),
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        list = extractGreetings(await r.json()) || [];
+    }
+    grCache.set(it.avatar, list);
+    return list;
+}
+
+function greetingText(text) {
+    const it = S.items[G.id];
+    const user = getContext().name1 || 'User';
+    return String(text)
+        .replace(/\{\{char\}\}|<BOT>/gi, it?.name || '')
+        .replace(/\{\{user\}\}|<USER>/gi, user);
+}
+
+function renderGreetings(state) {
+    const tabs = $id('bb-gr-tabs');
+    const body = $id('bb-gr-text');
+    const foot = $id('bb-gr-foot');
+    const msg = state === 'loading' ? 'gr_loading' : state === 'error' ? 'gr_err' : !G.list.length ? 'gr_none' : '';
+    $id('bb-gr-title').textContent = t('gr_title', { name: S.items[G.id]?.name || '' });
+    if (msg) {
+        tabs.innerHTML = '';
+        foot.hidden = true;
+        body.textContent = t(msg);
+        body.classList.add('bb-none');
+        return;
+    }
+    body.classList.remove('bb-none');
+    foot.hidden = false;
+    const cur = G.list[G.idx];
+    tabs.innerHTML = G.list.map((g, i) => {
+        const label = g.alt ? t('gr_alt', { n: g.alt }) : t('gr_first');
+        return `<button type="button" class="bb-gtab${i === G.idx ? ' is-active' : ''}" data-i="${i}" aria-pressed="${i === G.idx}">${esc(label)}</button>`;
+    }).join('');
+    tabs.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    body.textContent = greetingText(cur.text);
+    body.scrollTop = 0;
+    $id('bb-gr-pos').textContent = t('gr_of', { a: G.idx + 1, b: G.list.length });
+    $id('bb-gr-prev').disabled = G.idx <= 0;
+    $id('bb-gr-next').disabled = G.idx >= G.list.length - 1;
+    $id('bb-gr-copy').querySelector('span').textContent = t('gr_copy');
+}
+
+async function showGreetings(id) {
+    const it = S.items[id];
+    if (!it) return;
+    const req = ++G.req;
+    G.id = id; G.list = []; G.idx = 0;
+    $id('bb-gr').hidden = false;
+    renderGreetings('loading');
+    let list;
+    try { list = await loadGreetings(it); }
+    catch { if (req === G.req && !$id('bb-gr').hidden) renderGreetings('error'); return; }
+    if (req !== G.req || $id('bb-gr').hidden) return;
+    G.list = list;
+    renderGreetings();
+    $id('bb-gr-box').focus({ preventScroll: true });
+}
+
+function closeGreetings() {
+    G.req++;
+    const el = $id('bb-gr');
+    if (el) el.hidden = true;
+}
+
+function stepGreeting(d) {
+    const i = G.idx + d;
+    if (i < 0 || i >= G.list.length) return;
+    G.idx = i;
+    renderGreetings();
+}
+
+async function copyGreeting() {
+    const cur = G.list[G.idx];
+    if (!cur) return;
+    const text = greetingText(cur.text);
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch { /* fall back below */ }
+    if (!ok) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+        $id('bb-overlay').appendChild(ta);
+        ta.select();
+        try { ok = document.execCommand('copy'); } catch { /* ignore */ }
+        ta.remove();
+    }
+    if (!ok) return;
+    const span = $id('bb-gr-copy').querySelector('span');
+    span.textContent = t('gr_copied');
+    setTimeout(() => { if (span.isConnected) span.textContent = t('gr_copy'); }, 1200);
+}
+
 /* ---------- actions ---------- */
 async function openCharacter(id) {
     closeBrowser();
@@ -604,6 +752,22 @@ function build() {
                 <div id="bb-sentinel" aria-hidden="true"></div>
             </div>
         </main>
+    </div>
+    <div id="bb-gr" class="bb-gr" hidden>
+        <div id="bb-gr-box" class="bb-gr-box" role="dialog" aria-modal="true" tabindex="-1">
+            <div class="bb-row">
+                <h3 id="bb-gr-title" class="bb-gr-title"></h3>
+                <button type="button" id="bb-gr-close" class="bb-icon" data-i18n-aria="close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="bb-gr-tabs" class="bb-gr-tabs"></div>
+            <div id="bb-gr-text" class="bb-gr-text"></div>
+            <div id="bb-gr-foot" class="bb-row bb-gr-foot" hidden>
+                <button type="button" id="bb-gr-prev" class="bb-btn" data-i18n-aria="gr_prev"><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="bb-gr-pos" class="bb-gr-pos"></span>
+                <button type="button" id="bb-gr-next" class="bb-btn" data-i18n-aria="gr_next"><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" id="bb-gr-copy" class="bb-btn"><i class="fa-solid fa-copy"></i> <span></span></button>
+            </div>
+        </div>
     </div>`;
     document.body.appendChild(el);
 
@@ -668,6 +832,19 @@ function build() {
         else setTag(chip.dataset.tag, S.tagMode);
     });
 
+    // greetings viewer
+    $id('bb-gr-close').addEventListener('click', closeGreetings);
+    $id('bb-gr').addEventListener('mousedown', (e) => { if (e.target === $id('bb-gr')) closeGreetings(); });
+    $id('bb-gr-prev').addEventListener('click', () => stepGreeting(-1));
+    $id('bb-gr-next').addEventListener('click', () => stepGreeting(1));
+    $id('bb-gr-copy').addEventListener('click', copyGreeting);
+    $id('bb-gr-tabs').addEventListener('click', (e) => {
+        const b = e.target.closest('.bb-gtab');
+        if (!b) return;
+        G.idx = Number(b.dataset.i);
+        renderGreetings();
+    });
+
     // cards
     $id('bb-grid').addEventListener('click', (e) => {
         const card = e.target.closest('.bb-card');
@@ -682,6 +859,7 @@ function build() {
             return;
         }
         if (e.target.closest('[data-act="fav"]')) return toggleFav(id, card);
+        if (e.target.closest('[data-act="greetings"]')) return showGreetings(id);
         if (e.target.closest('[data-act="open"]')) openCharacter(id);
     });
     $id('bb-grid').addEventListener('error', (e) => {
@@ -697,16 +875,25 @@ function build() {
     }, { root: $id('bb-scroll'), rootMargin: '600px' }).observe($id('bb-sentinel'));
 
     document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Escape' || el.hidden) return;
+        if (el.hidden) return;
+        const grOpen = !$id('bb-gr').hidden;
+        if (grOpen && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.target.closest?.('input, select, textarea')) {
+            e.preventDefault();
+            stepGreeting(e.key === 'ArrowLeft' ? -1 : 1);
+            return;
+        }
+        if (e.key !== 'Escape') return;
         e.stopPropagation();
         const pop = $id('bb-settings');
-        if (!pop.hidden) pop.hidden = true;
+        if (grOpen) closeGreetings();
+        else if (!pop.hidden) pop.hidden = true;
         else closeBrowser();
     }, true);
 }
 
 function openBrowser() {
     build();
+    grCache.clear(); // cards may have been edited since last time
     loadFavs();
     $id('bb-sync').checked = S.sync;
     buildItems();
@@ -725,6 +912,7 @@ function closeBrowser() {
     if (el) {
         el.hidden = true;
         $id('bb-settings').hidden = true;
+        closeGreetings();
     }
     document.body.classList.remove('bb-lock');
 }

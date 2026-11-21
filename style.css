@@ -295,6 +295,55 @@ body.bb-lock { overflow: hidden; }
 .bb-card:not(.is-open) .bb-less { display: none; }
 .bb-card.is-open .bb-more { display: none; }
 
+/* Greetings viewer */
+.bb-gr {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: rgba(0, 0, 0, .55);
+}
+.bb-gr[hidden] { display: none; }
+.bb-gr-box {
+    width: min(820px, 100%); max-height: 100%;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px; box-sizing: border-box;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .2));
+    border-radius: 14px;
+    background: var(--bb-sticky-bg, var(--SmartThemeBlurTintColor, #1d1d24));
+    color: var(--SmartThemeBodyColor, #ddd);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    outline: 0;
+}
+.bb-gr-title {
+    flex: 1; min-width: 0; margin: 0; font-size: 1.1em; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bb-gr-tabs { flex: none; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.bb-gr-tabs:empty { display: none; }
+.bb-gtab {
+    flex: none; min-height: 34px; padding: 0 12px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .15));
+    border-radius: 17px; background: rgba(255, 255, 255, .05);
+    color: inherit; font: inherit; font-size: .9em; cursor: pointer; white-space: nowrap;
+}
+.bb-gtab.is-active {
+    border-color: var(--SmartThemeQuoteColor, #7aa2ff);
+    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #7aa2ff) 22%, transparent);
+    font-weight: 600;
+}
+.bb-gr-text {
+    flex: 1 1 auto; min-height: 80px; overflow-y: auto; overscroll-behavior: contain;
+    padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .12));
+    background: rgba(0, 0, 0, .22);
+    white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
+}
+.bb-gr-text.bb-none { opacity: .6; font-style: italic; }
+.bb-gr-foot { flex: none; }
+.bb-gr-foot[hidden] { display: none; }
+.bb-gr-pos { flex: 1; text-align: center; opacity: .7; font-size: .9em; }
+.bb-btn:disabled { opacity: .4; cursor: not-allowed; }
+
 /* Phones */
 @media (max-width: 640px) {
     .bb-shell { border-inline: 0; }
@@ -312,6 +361,8 @@ body.bb-lock { overflow: hidden; }
     .bb-tools select { flex-basis: 100%; }
     .bb-tools .bb-btn { flex: 1; }
     .bb-pop { top: 50px; }
+    .bb-gr { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+    .bb-gr-box { width: 100%; height: 100%; border: 0; border-radius: 0; padding: 10px; }
     .bb-field { flex-wrap: wrap; }
 }
 

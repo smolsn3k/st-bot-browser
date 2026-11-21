@@ -11,6 +11,7 @@ A SillyTavern extension for browsing your characters like a website (think Janit
 - **Sorting**: newest first, oldest first, A to Z, Z to A, recently chatted
 - **Favorites**: tap the star on any card, then switch to the **Favorites** tab (with a count) to see only those bots. Search, tag filters and sorting work there too
 - **Surprise me**: type how many bots you want (the number is required) and tap **Surprise me** to get that many random bots. It picks from the bots that match your selected tags (included and excluded), or from all bots if no tags are selected. Search text and the Favorites tab still apply, so on the Favorites tab you get random favorites. If fewer bots match than you asked for, you get all of them. **Shuffle again** rerolls, **Show all** returns to the normal list, and changing any filter also does
+- **Greetings viewer**: tap the speech-bubbles button on a card to read the initial message and every alternate greeting without opening the chat. Switch with the tabs, the arrows, or the left/right arrow keys, and copy the one you are reading. `{{char}}` and `{{user}}` are filled in for readability
 - **Open chat** straight from a card (button or avatar)
 - **Settings (gear icon)**:
   - **Language**: Auto, English or Русский
@@ -47,7 +48,7 @@ Press **Esc**, tap the X, or click outside the window to close it.
 
 ## Notes
 
-- Creator's notes are shown as plain text: HTML is stripped, and markdown is not rendered.
+- Creator's notes are shown as plain text: HTML is stripped, and markdown is not rendered. Greetings are also shown as plain text, with line breaks kept.
 - "Newest" and "Oldest" use the date SillyTavern stores for each character. Some imported bots may not have one, in which case they are ordered by their position in the list.
 - Settings (sort order, language, opacity, the sync switch) are stored in your browser's local storage. Synced favorites are stored under `bot_browser` in SillyTavern's extension settings and are keyed by the character's avatar filename.
 - If the list icon doesn't appear on your SillyTavern version, use the wand menu entry instead.
