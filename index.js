@@ -4,6 +4,7 @@ const PREF_KEY = 'bot_browser_prefs';
 const FAV_KEY = 'bot_browser_favs';     // local favorites (this browser only)
 const EXT_KEY = 'bot_browser';           // synced favorites live in extension_settings[EXT_KEY].favorites
 const BATCH = 40;
+const VERSION = '1.4.2';
 const LONG_NOTES = 220;
 
 /* ---------- i18n ---------- */
@@ -150,6 +151,65 @@ const S = {
     rendered: 0,
     built: false,
 };
+
+const GR_CSS = `
+.bb-gr {
+    position: fixed !important; inset: 0 !important; z-index: 5100 !important;
+    display: flex; align-items: center; justify-content: center;
+    width: auto; height: auto; margin: 0;
+    box-sizing: border-box;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: rgba(0, 0, 0, .6) !important;
+    color: var(--SmartThemeBodyColor, #ddd);
+    font-family: inherit;
+}
+.bb-gr[hidden] { display: none !important; }
+.bb-gr-box {
+    width: min(820px, 100%); max-height: 100%;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px; box-sizing: border-box;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .2));
+    border-radius: 14px;
+    background-color: var(--bb-gr-bg, #1d1d24) !important;
+    color: var(--SmartThemeBodyColor, #ddd);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    outline: 0;
+}
+.bb-gr-title {
+    flex: 1; min-width: 0; margin: 0; font-size: 1.1em; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bb-gr-tabs { flex: none; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.bb-gr-tabs:empty { display: none; }
+.bb-gtab {
+    flex: none; min-height: 34px; padding: 0 12px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .15));
+    border-radius: 17px; background: rgba(255, 255, 255, .05);
+    color: inherit; font: inherit; font-size: .9em; cursor: pointer; white-space: nowrap;
+}
+.bb-gtab.is-active {
+    border-color: var(--SmartThemeQuoteColor, #7aa2ff);
+    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #7aa2ff) 22%, transparent);
+    font-weight: 600;
+}
+.bb-gr-text {
+    flex: 1 1 auto; min-height: 80px; overflow-y: auto; overscroll-behavior: contain;
+    padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .12));
+    background: rgba(255, 255, 255, .05);
+    white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
+}
+.bb-gr-text.bb-none { opacity: .6; font-style: italic; }
+.bb-gr-foot { flex: none; }
+.bb-gr-foot[hidden] { display: none; }
+.bb-gr-pos { flex: 1; text-align: center; opacity: .7; font-size: .9em; }
+.bb-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+    .bb-gr { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) !important; }
+    .bb-gr-box { width: 100% !important; height: 100% !important; max-height: none !important; border: 0 !important; border-radius: 0 !important; padding: 10px !important; }
+}
+`;
 
 const G = { id: null, list: [], idx: 0, req: 0 };   // greetings viewer
 const grCache = new Map();                           // avatar -> [{ text, alt }]
@@ -709,6 +769,7 @@ function build() {
                     <input id="bb-sync" type="checkbox" class="bb-sw">
                 </label>
                 <div id="bb-sync-hint" class="bb-hint" data-i18n="sync_hint"></div>
+                <div class="bb-hint">Bot Browser v${VERSION}</div>
             </div>
             <label class="bb-search">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -763,6 +824,13 @@ function build() {
     </div>`;
     document.body.appendChild(el);
 
+    // greetings viewer styles live here (not in style.css) so a cached stylesheet can't break it
+    if (!$id('bb-gr-style')) {
+        const st = document.createElement('style');
+        st.id = 'bb-gr-style';
+        st.textContent = GR_CSS;
+        document.head.appendChild(st);
+    }
     const gr = document.createElement('div');
     gr.id = 'bb-gr';
     gr.className = 'bb-gr';
