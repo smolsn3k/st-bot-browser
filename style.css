@@ -297,19 +297,22 @@ body.bb-lock { overflow: hidden; }
 
 /* Greetings viewer */
 .bb-gr {
-    position: absolute; inset: 0; z-index: 10;
+    position: fixed; inset: 0; z-index: 5100;
     display: flex; align-items: center; justify-content: center;
+    box-sizing: border-box;
     padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
-    background: rgba(0, 0, 0, .55);
+    background: rgba(0, 0, 0, .6) !important;
+    color: var(--SmartThemeBodyColor, #ddd);
+    font-family: inherit;
 }
-.bb-gr[hidden] { display: none; }
+.bb-gr[hidden] { display: none !important; }
 .bb-gr-box {
     width: min(820px, 100%); max-height: 100%;
     display: flex; flex-direction: column; gap: 10px;
     padding: 12px; box-sizing: border-box;
     border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .2));
     border-radius: 14px;
-    background: var(--bb-sticky-bg, var(--SmartThemeBlurTintColor, #1d1d24));
+    background-color: var(--bb-gr-bg, #1d1d24) !important;
     color: var(--SmartThemeBodyColor, #ddd);
     box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
     outline: 0;
@@ -335,7 +338,7 @@ body.bb-lock { overflow: hidden; }
     flex: 1 1 auto; min-height: 80px; overflow-y: auto; overscroll-behavior: contain;
     padding: 10px 12px; border-radius: 10px;
     border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, .12));
-    background: rgba(0, 0, 0, .22);
+    background: rgba(255, 255, 255, .05);
     white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
 }
 .bb-gr-text.bb-none { opacity: .6; font-style: italic; }

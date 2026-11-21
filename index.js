@@ -600,6 +600,7 @@ async function showGreetings(id) {
     if (!it) return;
     const req = ++G.req;
     G.id = id; G.list = []; G.idx = 0;
+    setGreetingsBg();
     $id('bb-gr').hidden = false;
     renderGreetings('loading');
     let list;
@@ -609,6 +610,13 @@ async function showGreetings(id) {
     G.list = list;
     renderGreetings();
     $id('bb-gr-box').focus({ preventScroll: true });
+}
+
+function setGreetingsBg() {
+    const [r, g, b] = themeRgb();
+    $id('bb-gr').style.setProperty('--bb-gr-bg', `rgb(${r}, ${g}, ${b})`);
+    [['bb-gr-close', 'close'], ['bb-gr-prev', 'gr_prev'], ['bb-gr-next', 'gr_next']]
+        .forEach(([i, k]) => $id(i).setAttribute('aria-label', t(k)));
 }
 
 function closeGreetings() {
@@ -752,8 +760,14 @@ function build() {
                 <div id="bb-sentinel" aria-hidden="true"></div>
             </div>
         </main>
-    </div>
-    <div id="bb-gr" class="bb-gr" hidden>
+    </div>`;
+    document.body.appendChild(el);
+
+    const gr = document.createElement('div');
+    gr.id = 'bb-gr';
+    gr.className = 'bb-gr';
+    gr.hidden = true;
+    gr.innerHTML = `
         <div id="bb-gr-box" class="bb-gr-box" role="dialog" aria-modal="true" tabindex="-1">
             <div class="bb-row">
                 <h3 id="bb-gr-title" class="bb-gr-title"></h3>
@@ -768,8 +782,8 @@ function build() {
                 <button type="button" id="bb-gr-copy" class="bb-btn"><i class="fa-solid fa-copy"></i> <span></span></button>
             </div>
         </div>
-    </div>`;
-    document.body.appendChild(el);
+    `;
+    document.body.appendChild(gr);
 
     $id('bb-sort').value = S.sort;
     $id('bb-lang').value = S.lang;
